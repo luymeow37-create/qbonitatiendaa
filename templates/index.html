@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>Q'bonita Accesorios · Hecho a mano con amor</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;14..32,400;14..32,500;14..32,600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+</head>
+<body>
+    <header>
+        <div class="container header-flex">
+            <div class="logo">
+                <img src="https://via.placeholder.com/120x60?text=Q'bonita+Logo" alt="Q'bonita Accesorios">
+            </div>
+            <nav>
+                <a href="#historia">Historia</a>
+                <a href="#catalogo">Accesorios</a>
+                <a href="#contacto">Contacto</a>
+            </nav>
+        </div>
+    </header>
+
+    <main>
+        <!-- Sección Hero -->
+        <section class="hero">
+            <div class="container">
+                <h1>Accesorios únicos, <span class="highlight">hechos a mano</span> por Elena</h1>
+                <p>Descubre la magia de lo artesanal · Piezas con alma y ternura</p>
+            </div>
+        </section>
+
+        <!-- Historia de Elena -->
+        <section id="historia" class="historia">
+            <div class="container">
+                <div class="historia-grid">
+                    <div class="historia-texto">
+                        <h2>💙 Hecho con manos que crean, corazón que late</h2>
+                        <p><strong>Elena Figueroa</strong>, fundadora de <strong>Q'bonita Accesorios</strong>, transforma hilos, mostacillas y telas en pequeños tesoros. Cada prenda es un viaje: desde el boceto en su taller hasta el último punto, todo es 100% artesanal.</p>
+                        <p>✨ "Creo que un accesorio bonito puede cambiar tu día. Por eso le pongo amor a cada detalle." - Elena</p>
+                    </div>
+                    <div class="historia-imagen">
+                        <img src="https://images.unsplash.com/photo-1509631179647-0177331693ae?w=400" alt="Elena trabajando" loading="lazy">
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Catálogo de productos -->
+        <section id="catalogo" class="catalogo">
+            <div class="container">
+                <h2>🌸 Nuestra colección disponible</h2>
+                <div class="productos-grid" id="productos-grid">
+                    {% for product in products %}
+                    <div class="producto-card" data-product='{{ product | tojson | safe }}'>
+                        <!-- Mostrar la primera imagen si existe -->
+                        {% if product.imagenes_list and product.imagenes_list|length > 0 and product.imagenes_list[0] %}
+                            <img src="{{ product.imagenes_list[0] }}" alt="{{ product.titulo }}" class="producto-img" loading="lazy" onerror="this.src='https://via.placeholder.com/400?text=Error+de+imagen'">
+                        {% else %}
+                            <div class="img-placeholder">📿 Sin imagen</div>
+                        {% endif %}
+                        <h3>{{ product.titulo }}</h3>
+                        <p class="precio">${{ "%.2f"|format(product.precio) }}</p>
+                        <p class="descripcion-corta">{{ product.descripcion[:80] }}{% if product.descripcion|length > 80 %}...{% endif %}</p>
+                        <button class="btn-ver" onclick="openModal(this)">Ver accesorio</button>
+                    </div>
+                    {% else %}
+                    <p class="no-products">✨ Pronto tendremos nuevos accesorios ✨</p>
+                    {% endfor %}
+                </div>
+            </div>
+        </section>
+
+        <!-- Modal con carrusel de imágenes -->
+        <div id="productModal" class="modal">
+            <div class="modal-content">
+                <span class="close-modal">&times;</span>
+                <div class="modal-body">
+                    <div class="modal-gallery">
+                        <button class="carousel-btn prev"><i class="fas fa-chevron-left"></i></button>
+                        <img id="modal-img" src="" alt="Producto">
+                        <button class="carousel-btn next"><i class="fas fa-chevron-right"></i></button>
+                    </div>
+                    <div class="modal-info">
+                        <h3 id="modal-title"></h3>
+                        <p id="modal-price" class="precio-modal"></p>
+                        <p id="modal-desc"></p>
+                        <a href="#" id="whatsapp-btn" class="btn-whatsapp" target="_blank">
+                            <i class="fab fa-whatsapp"></i> Comprar por WhatsApp
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <footer id="contacto">
+        <div class="container">
+            <p>© 2025 Q'bonita Accesorios · Hecho a mano con 💙 por Elena Figueroa</p>
+            <p>WhatsApp: <a href="https://wa.me/584143939483" target="_blank">+58 414 393 9483</a></p>
+        </div>
+    </footer>
+
+    <script>
+        // ========== SISTEMA DE CARRUSEL CORREGIDO ==========
+        let currentImages = [];
+        let currentIndex = 0;
+
+        /**
+         * Abre el modal con los detalles del producto y las imágenes
+         * @param {HTMLElement} btn - Botón que disparó el evento
+         */
+        function openModal(btn) {
+            // Obtener la tarjeta del producto y los datos
+            const card = btn.closest('.producto-card');
+            const product = JSON.parse(card.getAttribute('data-product'));
+            
+            // ========== CORRECCIÓN: Procesar imágenes correctamente ==========
+            let imagenesList = [];
+            
+            // Caso 1: Ya es un array (viene desde el backend correctamente)
+            if (Array.isArray(product.imagenes_list) && product.imagenes_list.length > 0) {
+                imagenesList = product.imagenes_list.filter(img => img && img.trim() !== '');
+            } 
+            // Caso 2: Es un string con URLs separadas por comas
+            else if (product.imagenes && typeof product.imagenes === 'string' && product.imagenes.trim() !== '') {
+                imagenesList = product.imagenes.split(',')
+                    .map(url => url.trim())
+                    .filter(url => url.length > 0 && (url.startsWith('http') || url.startsWith('https')));
+            }
+            // Caso 3: Es una sola URL directa en el campo imagenes
+            else if (product.imagenes && typeof product.imagenes === 'string' && product.imagenes.startsWith('http')) {
+                imagenesList = [product.imagenes];
+            }
+            
+            // Si no hay imágenes después de todo, mostrar placeholder
+            if (imagenesList.length === 0) {
+                imagenesList = ['https://via.placeholder.com/400?text=Sin+imagen+disponible'];
+            }
+            
+            // Asignar a la variable global del carrusel
+            currentImages = imagenesList;
+            currentIndex = 0;
+            
+            // DEBUG: Mostrar en consola para verificar la URL de la imagen
+            console.log('📸 Producto:', product.titulo);
+            console.log('🖼️ URLs de imágenes:', currentImages);
+            
+            // Cargar datos en el modal
+            document.getElementById('modal-title').innerText = product.titulo;
+            document.getElementById('modal-price').innerText = `$${parseFloat(product.precio).toFixed(2)}`;
+            document.getElementById('modal-desc').innerText = product.descripcion || 'Sin descripción disponible';
+            
+            // Cargar la primera imagen
+            const modalImg = document.getElementById('modal-img');
+            modalImg.src = currentImages[0];
+            
+            // Manejar error de carga de imagen
+            modalImg.onerror = function() {
+                console.warn('⚠️ Error cargando imagen:', currentImages[0]);
+                this.src = 'https://via.placeholder.com/400?text=Imagen+no+encontrada';
+            };
+            
+            // Configurar botón de WhatsApp
+            const whatsappLink = `https://wa.me/584143939483?text=Hola%20Elena,%20estoy%20interesada%20en%20comprar%20el%20accesorio:%20${encodeURIComponent(product.titulo)}`;
+            document.getElementById('whatsapp-btn').href = whatsappLink;
+            
+            // Mostrar el modal
+            document.getElementById('productModal').style.display = "flex";
+            
+            // Actualizar visibilidad de los botones del carrusel
+            updateCarouselButtons();
+        }
+
+        /**
+         * Muestra u oculta los botones del carrusel según la cantidad de imágenes
+         */
+        function updateCarouselButtons() {
+            const prevBtn = document.querySelector('.prev');
+            const nextBtn = document.querySelector('.next');
+            
+            if (!prevBtn || !nextBtn) return;
+            
+            if (currentImages.length <= 1) {
+                prevBtn.style.display = 'none';
+                nextBtn.style.display = 'none';
+            } else {
+                prevBtn.style.display = 'flex';
+                nextBtn.style.display = 'flex';
+            }
+        }
+
+        /**
+         * Cambia la imagen del carrusel (siguiente o anterior)
+         * @param {number} direction - 1 para siguiente, -1 para anterior
+         */
+        function changeImage(direction) {
+            if (currentImages.length === 0) return;
+            
+            currentIndex += direction;
+            
+            // Lógica de ciclo infinito
+            if (currentIndex < 0) currentIndex = currentImages.length - 1;
+            if (currentIndex >= currentImages.length) currentIndex = 0;
+            
+            const modalImg = document.getElementById('modal-img');
+            const newImgUrl = currentImages[currentIndex];
+            
+            console.log(`🖼️ Cambiando a imagen ${currentIndex + 1}/${currentImages.length}:`, newImgUrl);
+            
+            modalImg.src = newImgUrl;
+            
+            // Manejar posible error en la nueva imagen
+            modalImg.onerror = function() {
+                console.warn('⚠️ Error cargando imagen:', newImgUrl);
+                this.src = 'https://via.placeholder.com/400?text=Imagen+no+encontrada';
+            };
+        }
+
+        /**
+         * Cierra el modal
+         */
+        function closeModal() {
+            document.getElementById('productModal').style.display = "none";
+        }
+
+        // ========== EVENT LISTENERS ==========
+        // Configurar botones del carrusel después de que el DOM esté listo
+        document.addEventListener('DOMContentLoaded', function() {
+            const prevBtn = document.querySelector('.prev');
+            const nextBtn = document.querySelector('.next');
+            const closeBtn = document.querySelector('.close-modal');
+            const modal = document.getElementById('productModal');
+            
+            if (prevBtn) prevBtn.addEventListener('click', () => changeImage(-1));
+            if (nextBtn) nextBtn.addEventListener('click', () => changeImage(1));
+            if (closeBtn) closeBtn.addEventListener('click', closeModal);
+            
+            // Cerrar al hacer clic fuera del modal
+            if (modal) {
+                modal.addEventListener('click', function(e) {
+                    if (e.target === modal) closeModal();
+                });
+            }
+        });
+        
+        // También mantenemos las funciones como globales para los onclick del modal
+        window.changeImage = changeImage;
+    </script>
+</body>
+</html>
